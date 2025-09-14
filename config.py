@@ -11,5 +11,5 @@ DOWNLOAD_DIR = r"C:\Users\USER\Desktop\YAN\Carpeta Universidad\decimo-semestre\A
 URL_LOGIN = "https://library.uniquindio.edu.co/databases"
 
 # Tus credenciales del CRAI (cámbialas por las reales)
-USUARIO = "yfgomezc@uqvirtual.edu.co"
-CONTRASENA = "jUpiter@52412"
+USUARIO = "correo"
+CONTRASENA = "123456"
