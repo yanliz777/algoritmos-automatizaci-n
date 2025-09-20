@@ -1,15 +1,16 @@
 # config.py
-# Configuración general del proyecto
+# === RUTAS Y CONFIG ===
 
-# Ruta donde tienes el archivo chromedriver.exe
+# Chromedriver
 CHROMEDRIVER_PATH = r"C:\Users\USER\Desktop\YAN\Carpeta Universidad\decimo-semestre\Analisis-de-algoritmos\Proyecto-final-algoritmos\chromedriver.exe"
 
-# Carpeta donde se guardarán descargas y capturas de pantalla
-DOWNLOAD_DIR = r"C:\Users\USER\Desktop\YAN\Carpeta Universidad\decimo-semestre\Analisis-de-algoritmos\Proyecto-final-algoritmos\bibliometria_ai\downloads"
+# Descargas por fuente
+DOWNLOAD_DIR_SAGE = r"C:\Users\USER\Desktop\proyecto-final-algoritmos\Sage_Journals"
+DOWNLOAD_DIR_SCIENCEDIRECT = r"C:\Users\USER\Desktop\proyecto-final-algoritmos\science_direct"
 
-# URL del login del CRAI
+# CRAI (no lo usamos directo en este paso)
 URL_LOGIN = "https://library.uniquindio.edu.co/databases"
 
-# Tus credenciales del CRAI (cámbialas por las reales)
+# Credenciales UQ
 USUARIO = "yfgomezc@uqvirtual.edu.co"
 CONTRASENA = "jUpiter@52412"

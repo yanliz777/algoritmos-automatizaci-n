@@ -6,6 +6,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+import glob
 
 def crear_navegador(ruta_driver, carpeta_descargas):
     os.makedirs(carpeta_descargas, exist_ok=True)
@@ -39,3 +40,44 @@ def cerrar_banners(driver):
             time.sleep(0.5)
         except Exception:
             pass
+def esperar_descarga_por_extension(carpeta_descargas, extension=".ris", timeout=60):
+    """
+    Espera hasta que aparezca un archivo con la extensión dada (p. ej. .ris)
+    creado/actualizado durante la ventana de espera. Devuelve la ruta del más reciente o None.
+    """
+    inicio = time.time()
+    fin = inicio + timeout
+    ya_existentes = set(glob.glob(os.path.join(carpeta_descargas, f"*{extension}")))
+    ultimo = None
+
+    while time.time() < fin:
+        candidatos = set(glob.glob(os.path.join(carpeta_descargas, f"*{extension}")))
+        nuevos = [p for p in candidatos if p not in ya_existentes and os.path.getmtime(p) >= inicio - 1]
+        if nuevos:
+            nuevos.sort(key=os.path.getmtime, reverse=True)
+            ultimo = nuevos[0]
+            break
+        # si no hay nuevos, a veces el botón descarga un data:URI muy rápido; revisa cambios de mtime
+        if candidatos:
+            ordenados = sorted(list(candidatos), key=os.path.getmtime, reverse=True)
+            if os.path.getmtime(ordenados[0]) >= inicio:
+                ultimo = ordenados[0]
+                break
+        time.sleep(0.3)
+    return ultimo
+
+def renombrar_si_es_necesario(ruta_archivo, nombre_final_sugerido):
+    """
+    Renombra ruta_archivo a nombre_final_sugerido en la misma carpeta (si son distintos).
+    Devuelve la ruta final (original si no pudo renombrar).
+    """
+    if not ruta_archivo:
+        return None
+    carpeta = os.path.dirname(ruta_archivo)
+    destino = os.path.join(carpeta, nombre_final_sugerido)
+    try:
+        if os.path.abspath(ruta_archivo) != os.path.abspath(destino):
+            os.replace(ruta_archivo, destino)
+        return destino
+    except Exception:
+        return ruta_archivo
