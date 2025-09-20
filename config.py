@@ -13,4 +13,4 @@ URL_LOGIN = "https://library.uniquindio.edu.co/databases"
 
 # Credenciales UQ
 USUARIO = "yfgomezc@uqvirtual.edu.co"
-CONTRASENA = "jUpiter@52412"
+CONTRASENA = "pass"
