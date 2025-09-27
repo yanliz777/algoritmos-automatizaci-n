@@ -17,3 +17,9 @@ CONTRASENA = "jUpiter@52412"
 
 # URL ScienceDirect vía CRAI
 SCIENCEDIRECT_URL = "https://www-sciencedirect-com.crai.referencistas.com/"
+# config.py  (solo muestra lo relevante)
+
+# ... (tus otras variables)
+
+# >>> Directorio de salida para archivos unificados
+OUTPUT_DIR_BIBLIO = r"C:\Users\USER\Desktop\YAN\Carpeta Universidad\decimo-semestre\Analisis-de-algoritmos\Proyecto-final-algoritmos\bases_de_datos"
