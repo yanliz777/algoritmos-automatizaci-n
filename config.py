@@ -22,4 +22,5 @@ SCIENCEDIRECT_URL = "https://www-sciencedirect-com.crai.referencistas.com/"
 # ... (tus otras variables)
 
 # >>> Directorio de salida para archivos unificados
+# Rutas de descargas (si quieres que el runner lea desde config)
 OUTPUT_DIR_BIBLIO = r"C:\Users\USER\Desktop\YAN\Carpeta Universidad\decimo-semestre\Analisis-de-algoritmos\Proyecto-final-algoritmos\bases_de_datos"

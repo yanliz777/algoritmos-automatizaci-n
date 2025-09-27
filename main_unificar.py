@@ -9,8 +9,8 @@ def _exists(p: str) -> bool:
 if __name__ == "__main__":
     # 1) Construimos la lista de raíces a inspeccionar (orden de prioridad)
     roots = [
-        getattr(config, "DOWNLOAD_DIR_SAGE", r"C:\Users\USER\Desktop\proyecto-final-algoritmos\Sage_Journals"),
-        getattr(config, "DOWNLOAD_DIR_SCIENCEDIRECT", r"C:\Users\USER\Desktop\proyecto-final-algoritmos\science_direct"),
+        getattr(config, "DOWNLOAD_DIR_SAGE", r"C:\Users\USER\Desktop\YAN\Carpeta Universidad\decimo-semestre\Analisis-de-algoritmos\Proyecto-final-algoritmos\bases_de_datos\Sage_Journals"),
+        getattr(config, "DOWNLOAD_DIR_SCIENCEDIRECT", r"C:\Users\USER\Desktop\YAN\Carpeta Universidad\decimo-semestre\Analisis-de-algoritmos\Proyecto-final-algoritmos\bases_de_datos\science_direct"),
         getattr(config, "DOWNLOAD_DIR", ""),  # por compatibilidad con scripts previos
         os.path.join(os.path.expanduser("~"), "Downloads"),  # Descargas por defecto de Windows
         os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)),  # raíz del proyecto
