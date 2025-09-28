@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-bibliometria_ordenamiento.py
+metodos_ordenamiento.py
 
 Script completo para:
   - Cargar archivo unificado de productos académicos (CSV/JSON/Excel)
