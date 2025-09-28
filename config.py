@@ -2,24 +2,36 @@
 # === CONFIGURACIÓN DEL PROYECTO ===
 
 import platform
-import os
+from pathlib import Path
 
-# === RUTAS SEGÚN EL SISTEMA OPERATIVO ===
-if platform.system() == "Windows":
-    # Windows
-    CHROMEDRIVER_PATH = r"C:\Users\USER\Desktop\YAN\Carpeta Universidad\decimo-semestre\Analisis-de-algoritmos\Proyecto-final-algoritmos\chromedriver.exe"
-    DOWNLOAD_DIR_SAGE = r"C:\Users\USER\Desktop\proyecto-final-algoritmos\Sage_Journals"
-    DOWNLOAD_DIR_SCIENCEDIRECT = r"C:\Users\USER\Desktop\proyecto-final-algoritmos\science_direct"
+# === DETECTAR SISTEMA OPERATIVO ===
+SO = platform.system()
+
+# === BASE DEL PROYECTO SEGÚN EL USUARIO ===
+if SO == "Windows":
+    # ⚠️ Tu compañero en Windows cambia solo esta ruta
+    BASE_DIR = Path(r"C:\Users\USER\Desktop\YAN\Carpeta Universidad\decimo-semestre\Analisis-de-algoritmos\Proyecto-final-algoritmos")
 else:
-    # Linux / macOS
-    CHROMEDRIVER_PATH = "/usr/bin/chromedriver"
-    DOWNLOAD_DIR_SAGE = os.path.expanduser("~/Descargas/Sage_Journals")
-    DOWNLOAD_DIR_SCIENCEDIRECT = os.path.expanduser("~/Descargas/science_direct")
+    # ⚠️ Tú en Ubuntu
+    BASE_DIR = Path("/home/ycmejia/Escritorio/PROYECTO ALGORITMOS")
+
+# === CHROMEDRIVER ===
+if SO == "Windows":
+    CHROMEDRIVER_PATH = BASE_DIR / "chromedriver.exe"
+else:
+    CHROMEDRIVER_PATH = Path("/usr/bin/chromedriver")  # instalado en Linux vía apt
+
+# === RUTAS DE DESCARGA ===
+DOWNLOAD_DIR_SAGE = BASE_DIR / "bases_de_datos" / "Sage_Journals"
+DOWNLOAD_DIR_SCIENCEDIRECT = BASE_DIR / "bases_de_datos" / "science_direct"
+
+# === DIRECTORIO DE SALIDA ===
+OUTPUT_DIR_BIBLIO = BASE_DIR / "salidas"
 
 # === URLS IMPORTANTES ===
 URL_LOGIN = "https://library.uniquindio.edu.co/databases"
+SCIENCEDIRECT_URL = "https://www-sciencedirect-com.crai.referencistas.com/"
 
 # === CREDENCIALES ===
 USUARIO = "yarleyc.mejiab@uqvirtual.edu.co"
 CONTRASENA = "Familia967vfg15a"
-#ss

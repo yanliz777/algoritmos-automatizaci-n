@@ -3,17 +3,16 @@ import os
 import config
 from utils.ris_merge import load_ris_from_dirs, merge_records, export_outputs
 
+
 def _exists(p: str) -> bool:
     return bool(p) and os.path.isdir(p)
 
+
 if __name__ == "__main__":
-    # 1) Construimos la lista de raíces a inspeccionar (orden de prioridad)
+    # 1) Construimos la lista de raíces a inspeccionar (solo tus rutas en Ubuntu)
     roots = [
-        getattr(config, "DOWNLOAD_DIR_SAGE", r"C:\Users\USER\Desktop\YAN\Carpeta Universidad\decimo-semestre\Analisis-de-algoritmos\Proyecto-final-algoritmos\bases_de_datos\Sage_Journals"),
-        getattr(config, "DOWNLOAD_DIR_SCIENCEDIRECT", r"C:\Users\USER\Desktop\YAN\Carpeta Universidad\decimo-semestre\Analisis-de-algoritmos\Proyecto-final-algoritmos\bases_de_datos\science_direct"),
-        getattr(config, "DOWNLOAD_DIR", ""),  # por compatibilidad con scripts previos
-        os.path.join(os.path.expanduser("~"), "Downloads"),  # Descargas por defecto de Windows
-        os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)),  # raíz del proyecto
+        str(config.DOWNLOAD_DIR_SAGE),
+        str(config.DOWNLOAD_DIR_SCIENCEDIRECT),
     ]
 
     # Normalizamos: existentes, únicos y en el mismo orden
@@ -21,7 +20,8 @@ if __name__ == "__main__":
     seen = set()
     for r in roots:
         if _exists(r) and r not in seen:
-            uniq.append(r); seen.add(r)
+            uniq.append(r)
+            seen.add(r)
 
     print("📚 Directorios a inspeccionar:")
     for d in uniq:
@@ -33,7 +33,7 @@ if __name__ == "__main__":
     registros = load_ris_from_dirs(
         pairs,
         exts=(".ris", ".RIS", ".txt", ".TXT"),
-        verbose=True
+        verbose=True,
     )
 
     # 3) Deduplicación y export
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     print(f"   → Registros unificados (sin duplicados): {len(unificados)}")
     print(f"   → Duplicados detectados: {len(duplicados)}")
 
-    out_dir = getattr(config, "OUTPUT_DIR_BIBLIO", r"C:\Users\USER\Desktop\proyecto-final-algoritmos\salidas")
+    out_dir = str(config.OUTPUT_DIR_BIBLIO)
     print("\n💾 Exportando archivos ...")
     os.makedirs(out_dir, exist_ok=True)
     export_outputs(unificados, duplicados, out_dir, base_name="unificado_ai_generativa")

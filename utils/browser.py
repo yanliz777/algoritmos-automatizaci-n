@@ -1,4 +1,4 @@
-# utils/navegador.py
+# utils/browser.py
 import os, time
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -9,10 +9,12 @@ from selenium.webdriver.support import expected_conditions as EC
 import glob
 
 def crear_navegador(ruta_driver, carpeta_descargas):
-    os.makedirs(carpeta_descargas, exist_ok=True)
+    # asegurar que la carpeta exista
+    os.makedirs(str(carpeta_descargas), exist_ok=True)
+
     opciones = Options()
     preferencias = {
-        "download.default_directory": carpeta_descargas,
+        "download.default_directory": str(carpeta_descargas),  # 👈 convertir a str
         "download.prompt_for_download": False,
         "download.directory_upgrade": True,
         "safebrowsing.enabled": True,
@@ -25,7 +27,7 @@ def crear_navegador(ruta_driver, carpeta_descargas):
     opciones.add_argument("--no-default-browser-check")
     opciones.add_argument("--disable-sync")
 
-    servicio = Service(ruta_driver)
+    servicio = Service(str(ruta_driver))  # 👈 convertir a str
     return webdriver.Chrome(service=servicio, options=opciones)
 
 def cerrar_banners(driver):
@@ -40,11 +42,13 @@ def cerrar_banners(driver):
             time.sleep(0.5)
         except Exception:
             pass
+
 def esperar_descarga_por_extension(carpeta_descargas, extension=".ris", timeout=60):
     """
     Espera hasta que aparezca un archivo con la extensión dada (p. ej. .ris)
     creado/actualizado durante la ventana de espera. Devuelve la ruta del más reciente o None.
     """
+    carpeta_descargas = str(carpeta_descargas)  # 👈 asegurar string
     inicio = time.time()
     fin = inicio + timeout
     ya_existentes = set(glob.glob(os.path.join(carpeta_descargas, f"*{extension}")))
