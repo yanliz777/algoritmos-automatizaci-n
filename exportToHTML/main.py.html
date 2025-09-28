@@ -1,0 +1,60 @@
+<html>
+<head>
+<title>main.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #6aab73;}
+.s4 { color: #7a7e85;}
+.s5 { color: #2aacb8;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+main.py</font>
+</center></td></tr></table>
+<pre><span class="s0">from </span><span class="s1">utils</span><span class="s2">.</span><span class="s1">browser </span><span class="s0">import </span><span class="s1">crear_navegador</span><span class="s2">, </span><span class="s1">cerrar_banners</span>
+<span class="s0">from </span><span class="s1">utils</span><span class="s2">.</span><span class="s1">sso_google </span><span class="s0">import </span><span class="s1">login_con_google</span>
+<span class="s0">from </span><span class="s1">utils</span><span class="s2">.</span><span class="s1">sage </span><span class="s0">import </span><span class="s1">buscar_en_sage</span><span class="s2">, </span><span class="s1">exportar_ris_paginando</span>
+<span class="s0">import </span><span class="s1">config</span>
+
+<span class="s0">if </span><span class="s1">__name__ </span><span class="s2">== </span><span class="s3">&quot;__main__&quot;</span><span class="s2">:</span>
+    <span class="s1">driver </span><span class="s2">= </span><span class="s1">crear_navegador</span><span class="s2">(</span><span class="s1">config</span><span class="s2">.</span><span class="s1">CHROMEDRIVER_PATH</span><span class="s2">, </span><span class="s1">config</span><span class="s2">.</span><span class="s1">DOWNLOAD_DIR_SAGE</span><span class="s2">)</span>
+    <span class="s0">try</span><span class="s2">:</span>
+        <span class="s1">URL_REVISTA </span><span class="s2">= </span><span class="s3">&quot;https://journals-sagepub-com.crai.referencistas.com/&quot;</span>
+        <span class="s1">DOMINIO_OBJETIVO </span><span class="s2">= </span><span class="s3">&quot;journals-sagepub-com&quot;</span>
+
+        <span class="s1">login_con_google</span><span class="s2">(</span>
+            <span class="s1">driver</span><span class="s2">=</span><span class="s1">driver</span><span class="s2">,</span>
+            <span class="s1">url_revista</span><span class="s2">=</span><span class="s1">URL_REVISTA</span><span class="s2">,</span>
+            <span class="s1">correo_institucional</span><span class="s2">=</span><span class="s1">config</span><span class="s2">.</span><span class="s1">USUARIO</span><span class="s2">,</span>
+            <span class="s1">contrasena</span><span class="s2">=</span><span class="s1">config</span><span class="s2">.</span><span class="s1">CONTRASENA</span><span class="s2">,</span>
+            <span class="s1">carpeta_descargas</span><span class="s2">=</span><span class="s1">config</span><span class="s2">.</span><span class="s1">DOWNLOAD_DIR_SAGE</span><span class="s2">,</span>
+            <span class="s1">dominio_objetivo</span><span class="s2">=</span><span class="s1">DOMINIO_OBJETIVO</span>
+        <span class="s2">)</span>
+
+        <span class="s1">cerrar_banners</span><span class="s2">(</span><span class="s1">driver</span><span class="s2">)</span>
+
+        <span class="s1">QUERY </span><span class="s2">= </span><span class="s3">&quot;generative artificial intelligence&quot;</span>
+        <span class="s1">buscar_en_sage</span><span class="s2">(</span><span class="s1">driver</span><span class="s2">, </span><span class="s1">QUERY</span><span class="s2">, </span><span class="s1">config</span><span class="s2">.</span><span class="s1">DOWNLOAD_DIR_SAGE</span><span class="s2">)</span>
+
+        <span class="s4"># === Exportar múltiples páginas (ajusta max_paginas a 5–10 según lo que quieras) ===</span>
+        <span class="s1">exportar_ris_paginando</span><span class="s2">(</span>
+            <span class="s1">driver</span><span class="s2">,</span>
+            <span class="s1">carpeta_descargas</span><span class="s2">=</span><span class="s1">config</span><span class="s2">.</span><span class="s1">DOWNLOAD_DIR_SAGE</span><span class="s2">,</span>
+            <span class="s1">consulta_slug</span><span class="s2">=</span><span class="s3">&quot;generative-artificial-intelligence&quot;</span><span class="s2">,</span>
+            <span class="s1">max_paginas</span><span class="s2">=</span><span class="s5">5  </span><span class="s4"># 10 páginas ≈ 100 artículos si pageSize=10</span>
+        <span class="s2">)</span>
+
+        <span class="s1">print</span><span class="s2">(</span><span class="s3">&quot;URL actual:&quot;</span><span class="s2">, </span><span class="s1">driver</span><span class="s2">.</span><span class="s1">current_url</span><span class="s2">)</span>
+        <span class="s1">print</span><span class="s2">(</span><span class="s3">&quot;Título:&quot;</span><span class="s2">, </span><span class="s1">driver</span><span class="s2">.</span><span class="s1">title</span><span class="s2">)</span>
+
+    <span class="s0">finally</span><span class="s2">:</span>
+        <span class="s1">driver</span><span class="s2">.</span><span class="s1">quit</span><span class="s2">()</span>
+</pre>
+</body>
+</html>
