@@ -324,7 +324,7 @@ if __name__ == "__main__":
     # Ajusta aquí cuántas páginas quieres de cada fuente:
     run_pipeline(
         query='generative artificial intelligence',
-        paginas_sage=5,   # SAGE: páginas
-        paginas_sd=5,     # ScienceDirect: páginas
+        paginas_sage=20,   # SAGE: páginas
+        paginas_sd=20,     # ScienceDirect: páginas
         sd_per_page=100   # SD: resultados por página (25/50/100)
     )
