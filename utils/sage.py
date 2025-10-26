@@ -1,14 +1,18 @@
 # utils/sage.py
-# Automatiza la búsqueda en SAGE Journals.
-# Paso 1: localizar el buscador de la home y enviar la cadena entre comillas.
-# Paso 2 (pendiente): en la página de resultados, seleccionar/descargar RIS por lotes.
+# Automatiza búsqueda y exportación por páginas en SAGE Journals (robusto contra modal/backdrop).
+
+import os, time
 from datetime import datetime
-from selenium.common.exceptions import TimeoutException
-from .browser import esperar_descarga_por_extension, renombrar_si_es_necesario
+from urllib.parse import urljoin
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import time, os
+from selenium.common.exceptions import (
+    TimeoutException, NoSuchElementException, ElementClickInterceptedException
+)
+from .browser import esperar_descarga_por_extension, renombrar_si_es_necesario
+
+# ---------------- utilidades ----------------
 
 def _guardar(driver, carpeta, nombre_png):
     try:
@@ -32,6 +36,49 @@ def _cerrar_banners_sage(driver):
         except Exception:
             pass
 
+def _scroll_center(driver, el):
+    try:
+        driver.execute_script("arguments[0].scrollIntoView({block:'center'});", el)
+    except Exception:
+        pass
+
+def _ensure_no_modal(driver):
+    """
+    Cierra/oculta el modal de export y elimina cualquier 'modal-backdrop' residual
+    que pueda bloquear la interacción con la paginación.
+    """
+    # intentar cerrar con el botón Close si está visible
+    try:
+        _cerrar_modal_export(driver, timeout=2)
+    except Exception:
+        pass
+
+    # limpieza agresiva con JS
+    try:
+        driver.execute_script("""
+            const modal = document.querySelector('#exportCitation');
+            if (modal) {
+                modal.style.display = 'none';
+                modal.classList.remove('show');
+            }
+            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+        """)
+    except Exception:
+        pass
+    time.sleep(0.2)
+
+def _lista_resultados_cargada(d):
+    """Heurística simple: hay resultados listados (sin depender de selectores frágiles)."""
+    try:
+        items = d.find_elements(By.CSS_SELECTOR, 'a[href*="/doi/"], a.issue-item__title, div.search__item')
+        return len(items) > 0
+    except Exception:
+        return False
+
+# ---------------- búsqueda ----------------
+
 def buscar_en_sage(driver, query, carpeta_descargas):
     """
     Desde la home de SAGE:
@@ -42,14 +89,12 @@ def buscar_en_sage(driver, query, carpeta_descargas):
     """
     _cerrar_banners_sage(driver)
 
-    # 1) Localizar el contenedor "role=search" para asegurarnos que la UI cargó
+    # 1) Contenedor de búsqueda presente
     WebDriverWait(driver, 15).until(
         EC.presence_of_element_located((By.CSS_SELECTOR, 'div[role="search"][aria-label*="Search Sage Journals"]'))
     )
 
-    # 2) El id del input es dinámico, así que usamos selectores estables:
-    #    - por name="AllField"
-    #    - o por clase .quick-search__input
+    # 2) Input (selectores estables)
     input_selectores = [
         (By.NAME, "AllField"),
         (By.CSS_SELECTOR, 'input.quick-search__input'),
@@ -72,33 +117,24 @@ def buscar_en_sage(driver, query, carpeta_descargas):
     textbox.clear()
     textbox.send_keys(cadena)
 
-    # 4) Enviar búsqueda: por el botón o submit del formulario
+    # 4) Enviar búsqueda
     try:
         boton_buscar = driver.find_element(By.CSS_SELECTOR, 'button.quick-search__button')
         boton_buscar.click()
     except Exception:
-        # Alternativa: enviar ENTER al formulario si el botón no está accesible
         textbox.submit()
 
-    # 5) Esperar a que cambie de la home a resultados
-    #    Normalmente la URL incluye /action/doSearch o /search
+    # 5) Esperar resultados (/action/doSearch o /search)
     WebDriverWait(driver, 20).until(
         lambda d: ("/action/doSearch" in d.current_url) or ("/search" in d.current_url)
     )
 
-    time.sleep(1)  # pequeña pausa para que terminen de renderizar contadores/listas
+    time.sleep(1)
     _guardar(driver, carpeta_descargas, "06_sage_resultados.png")
-
     print("✅ Búsqueda enviada en SAGE. URL resultados:", driver.current_url)
-
-    # (Placeholder) Devolvemos True si aparentemente estamos en resultados
     return True
 
-
-#******
-from datetime import datetime
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
-from .browser import esperar_descarga_por_extension, renombrar_si_es_necesario
+# ---------------- export modal helpers ----------------
 
 def _export_habilitado(d):
     """Devuelve True cuando el enlace 'Export selected citations' está habilitado."""
@@ -120,7 +156,6 @@ def _cerrar_modal_export(driver, timeout=10):
     except TimeoutException:
         return False
 
-    # botón close
     candidatos = [
         (By.CSS_SELECTOR, '#exportCitation button.close[data-dismiss="modal"]'),
         (By.CSS_SELECTOR, '#exportCitation button.close'),
@@ -129,7 +164,6 @@ def _cerrar_modal_export(driver, timeout=10):
     for how, what in candidatos:
         try:
             WebDriverWait(driver, 5).until(EC.element_to_be_clickable((how, what))).click()
-            # esperar a que desaparezca el modal
             WebDriverWait(driver, timeout).until(
                 EC.invisibility_of_element_located((By.CSS_SELECTOR, '#exportCitation'))
             )
@@ -138,88 +172,114 @@ def _cerrar_modal_export(driver, timeout=10):
             continue
     return False
 
+# ---------------- paginación robusta ----------------
+
 def _ir_a_siguiente_pagina(driver):
     """
-    Hace click en 'Siguiente' y espera a que cargue la nueva página.
-    Devuelve True si navegó, False si no encontró el botón (última página).
+    Click robusto en 'Siguiente':
+      - limpia/oculta modal y backdrop
+      - intenta click normal / JS
+      - fallback: navegar a href (absoluto)
     """
+    _ensure_no_modal(driver)
+
+    next_anchor = None
     candidatos = [
-        (By.CSS_SELECTOR, 'a.pagination__link.next'),
         (By.CSS_SELECTOR, 'a.next.hvr-forward.pagination__link'),
-        (By.XPATH, '//a[contains(@class,"pagination__link") and contains(@class,"next")]')
+        (By.CSS_SELECTOR, 'a.pagination__link.next'),
+        (By.CSS_SELECTOR, 'li.pagination-link.next-link > a.anchor'),
+        (By.XPATH, '//a[contains(@class,"pagination__link") and contains(@class,"next")]'),
+        (By.XPATH, '//a[contains(@data-aa-name,"next") or .//span[contains(., "next")]]'),
     ]
-    next_link = None
     for how, what in candidatos:
         try:
-            next_link = driver.find_element(how, what)
+            next_anchor = driver.find_element(how, what)
             break
         except NoSuchElementException:
             continue
 
-    if not next_link:
+    if not next_anchor:
         return False
 
-    href_before = driver.current_url
-    driver.execute_script("arguments[0].scrollIntoView({block:'end'});", next_link)
-    next_link.click()
+    # ¿deshabilitado?
+    try:
+        aria = (next_anchor.get_attribute("aria-disabled") or "").lower()
+        cls = (next_anchor.get_attribute("class") or "")
+        if 'disabled' in cls or aria == 'true':
+            return False
+    except Exception:
+        pass
 
-    # Esperar que cambie la URL o que se refresque el listado
+    href_before = driver.current_url
+    href = next_anchor.get_attribute("href")
+
+    _scroll_center(driver, next_anchor)
+    try:
+        WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, '.')))
+        next_anchor.click()
+    except Exception:
+        try:
+            driver.execute_script("arguments[0].click();", next_anchor)
+        except Exception:
+            if href:
+                driver.get(urljoin(href_before, href))
+            else:
+                return False
+
+    # esperar cambio
     try:
         WebDriverWait(driver, 15).until(
-            lambda d: d.current_url != href_before or _lista_resultados_cargada(d)
+            lambda d: (d.current_url != href_before) or _lista_resultados_cargada(d)
         )
-        time.sleep(0.8)
+        time.sleep(0.6)
+        _ensure_no_modal(driver)
         return True
     except TimeoutException:
         return False
 
-def _lista_resultados_cargada(d):
-    """Heurística simple: hay resultados listados (sin depender de selectores frágiles)."""
-    try:
-        # cualquier card/enlace de resultado
-        items = d.find_elements(By.CSS_SELECTOR, 'a[href*="/doi/"], a.issue-item__title, div.search__item')
-        return len(items) > 0
-    except Exception:
-        return False
+# ---------------- exportar página actual ----------------
 
 def exportar_ris_pagina_actual(driver, carpeta_descargas, consulta_slug="generative-artificial-intelligence", etiqueta="p1"):
     """
     Selecciona todos los resultados visibles, abre Export, descarga RIS y CIERRA el modal.
-    Usa tus selectores:
       - Select all: #action-bar-select-all
       - Export: a[data-id="srp-export-citations"]
       - Modal: #exportCitation
       - Descargar: a.download__btn
     """
     _cerrar_banners_sage(driver)
+    _ensure_no_modal(driver)  # por si quedó algo de una operación previa
 
     # Select all
     chk_all = WebDriverWait(driver, 10).until(
         EC.element_to_be_clickable((By.CSS_SELECTOR, '#action-bar-select-all'))
     )
-    driver.execute_script("arguments[0].scrollIntoView({block:'center'});", chk_all)
+    _scroll_center(driver, chk_all)
     if not chk_all.is_selected():
         chk_all.click()
-        time.sleep(0.4)
+        time.sleep(0.3)
 
-    # Esperar que Export se habilite
+    # Habilitar export
     WebDriverWait(driver, 10).until(_export_habilitado)
     export_link = driver.find_element(By.CSS_SELECTOR, 'a[data-id="srp-export-citations"]')
-    export_link.click()
+    try:
+        export_link.click()
+    except ElementClickInterceptedException:
+        driver.execute_script("arguments[0].click();", export_link)
 
     # Modal visible
     modal = WebDriverWait(driver, 10).until(
         EC.visibility_of_element_located((By.CSS_SELECTOR, '#exportCitation'))
     )
-    time.sleep(0.3)
+    time.sleep(0.2)
 
-    # (El formato RIS parece ser el default; si hubiera un <select>, forzamos 'RIS')
+    # (si hubiera un select de formato, forzamos RIS)
     try:
         sel = modal.find_element(By.CSS_SELECTOR, 'select')
         for opt in sel.find_elements(By.TAG_NAME, 'option'):
             if "RIS" in (opt.text or ""):
                 opt.click()
-                time.sleep(0.3)
+                time.sleep(0.2)
                 break
     except Exception:
         pass
@@ -228,18 +288,23 @@ def exportar_ris_pagina_actual(driver, carpeta_descargas, consulta_slug="generat
     btn_download = WebDriverWait(modal, 10).until(
         EC.element_to_be_clickable((By.CSS_SELECTOR, 'a.download__btn'))
     )
-    btn_download.click()
+    try:
+        btn_download.click()
+    except ElementClickInterceptedException:
+        driver.execute_script("arguments[0].click();", btn_download)
 
     # Esperar archivo .ris
-    ruta = esperar_descarga_por_extension(carpeta_descargas, extension=".ris", timeout=90)
+    ruta = esperar_descarga_por_extension(carpeta_descargas, extension=".ris", timeout=120)
     fecha = datetime.now().strftime("%Y%m%d_%H%M")
     nombre_final = f"sage_{consulta_slug}_{etiqueta}_{fecha}.ris"
     final_path = renombrar_si_es_necesario(ruta, nombre_final)
     print(f"✅ Página {etiqueta}: descargado -> {final_path}")
 
-    # Cerrar modal
-    _cerrar_modal_export(driver)
+    # Cerrar/limpiar modal y backdrop
+    _ensure_no_modal(driver)
     return final_path
+
+# ---------------- loop de paginación ----------------
 
 def exportar_ris_paginando(driver, carpeta_descargas, consulta_slug="generative-artificial-intelligence", max_paginas=5):
     """
@@ -262,25 +327,7 @@ def exportar_ris_paginando(driver, carpeta_descargas, consulta_slug="generative-
         if not pudo:
             print("ℹ️  No hay más páginas (o no se encontró 'Siguiente').")
             break
-        # pequeña espera para que renderice
-        time.sleep(0.8)
+        time.sleep(0.6)
 
     print(f"✅ Descargas completadas: {len(rutas)} archivo(s).")
     return rutas
-#******
-
-
-# ------------------ ESQUELETO para la exportación RIS (pendiente DOM) ------------------
-
-def exportar_ris_por_lotes(driver, carpeta_descargas, max_paginas=None):
-    """
-    PENDIENTE: Necesitamos el DOM de la página de resultados para:
-      - marcar todos los resultados de la página (checkbox general)
-      - abrir 'Export' / 'Cite' / 'Download' y elegir formato 'RIS'
-      - confirmar descarga
-      - paginar (siguiente página) y repetir
-    Cuando me compartas los selectores, implemento este bloque.
-    """
-    raise NotImplementedError(
-        "Necesito los selectores de la página de resultados de SAGE para implementar la exportación RIS y la paginación."
-    )
